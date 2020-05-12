@@ -26,7 +26,14 @@ defmodule Jop do
   end
 
   @doc """
-  Clear all entries in memory then
+  Returns the number of elements in log
+  """
+  @spec size(atom) :: pos_integer()
+  def size(table),
+    do: ETS.info(table, :size)
+
+  @doc """
+  Clear all entries in log then
   reopens the ets table
 
   Returns the handle
