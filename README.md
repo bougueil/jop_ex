@@ -10,7 +10,7 @@ These events are then flushed to files for analysis.
 ```elixir
 def deps do
   [
-  {:jop_ex, git: "https://github.com/bougueil/jop_ex"}
+    {:jop, git: "git://github.com/bougueil/jop_ex"}
   ]
 end
 ```
