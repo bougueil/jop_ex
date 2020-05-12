@@ -12,7 +12,7 @@ defmodule Jop do
   ...> |> Jop.log("device_1", data: 112)
   ...> |> Jop.log("device_2", data: 113)
   ...> |> Jop.flush()
-  ...> |> length() > 0
+  ...> |> Jop.size() > 0
   true
   """
 
