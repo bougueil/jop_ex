@@ -24,7 +24,7 @@ end
   ...> |> Jop.flush()
 log stored in jop_myjop.2020_05_12_21.42.49_dates.gz
 log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
-[:ok, :ok]
+:myjop
 ```
 ## Example
 ```
@@ -46,7 +46,7 @@ Jop.flush log
 
 log stored in jop_myjop.2020_05_12_21.42.49_dates.gz
 log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
-[:ok, :ok]
+:myjop
 ```
 will generate both a temporal (by date) and a spatial (by key) log files:
 

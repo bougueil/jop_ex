@@ -25,9 +25,9 @@ defmodule Jop do
     do: clear(table)
 
   @doc """
-  Returns the number of elements in log
+  Returns the number of elements in log or :undefined
   """
-  @spec size(atom) :: pos_integer()
+  @spec size(atom) :: pos_integer() | :undefined
   def size(table),
     do: ETS.info(table, :size)
 
@@ -86,6 +86,7 @@ defmodule Jop do
 
       for {task, fd} <- awaits, do: (Task.await(task); _ = File.close(fd))
       for name <- names, do: IO.puts "log stored in #{name}"
+      table
     rescue
       _ -> IO.puts "Error: no log available."
     end
