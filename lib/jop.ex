@@ -4,16 +4,13 @@ defmodule Jop do
 
   @moduledoc """
   Documentation for Jop an in memory log
-  """
-
-  @doc """
 
   ## Example
 
   iex> :mylog
   ...> |> Jop.init()
-  ...> |> Jop.log("mykey1", {:vv,112})
-  ...> |> Jop.log("mykey2", {:vv,113})
+  ...> |> Jop.log("device_1", data: 112)
+  ...> |> Jop.log("device_2", data: 113)
   ...> |> Jop.flush()
   ...> |> length() > 0
   true
@@ -65,23 +62,23 @@ defmodule Jop do
     ETS.delete(table, @tag_start)
 
     # flush log to the 'temporal' log file
-    for {k, b, t} <- :lists.keysort(3, ETS.tab2list(table)) do
-      :io.format(fd, "~s ~w: ~w~n", [format_duration_us(t - t0), k, b])
+    for {k, op, t} <- :lists.keysort(3, ETS.tab2list(table)) do
+       IO.puts fd, "#{fmt_duration_us(t - t0)} #{inspect(k)}: #{inspect(op)}"
     end
 
     # flush log to 'spatial' log file 
-    for {k, b, t} <- :lists.keysort(1, ETS.tab2list(table)) do
-      :io.format(fb, "~w: ~w ~s~n", [k, b, format_duration_us(t - t0)])
+    for {k, op, t} <- :lists.keysort(1, ETS.tab2list(table)) do
+      IO.puts fb, "#{inspect(k)}: #{inspect(op)} #{fmt_duration_us(t - t0)}"
     end
 
     for f <- [fd, fb], do: _ = File.close(f)
     ETS.delete(table)
-    fname
+    [dates_file: "#{[fname, "dates"]}", spatial_file: "#{[fname, "keys"]}"]
   end
 
   defp fname(table, date), do: ["jop_", Atom.to_string(table), date, "_"]
 
-  defp now_us(), do: System.monotonic_time(:micro_seconds)
+  defp now_us(), do: System.monotonic_time(:microsecond)
 
   defp date_str() do
     hms =
@@ -94,11 +91,11 @@ defmodule Jop do
     :io_lib.format(".~p_~2.2.0w_~2.2.0w_~2.2.0w.~2.2.0w.~2.2.0w", hms)
   end
 
-  defp format_duration_us(duration_us) do
+  defp fmt_duration_us(duration_us) do
     sec = div(duration_us, 1_000_000)
     rem_us = rem(duration_us, 1_000_000)
     ms = div(rem_us, 1000)
-    us = rem(ms, 1000)
+    us = rem(rem_us, 1000)
     {_, {h, m, s}} = :calendar.gregorian_seconds_to_datetime(sec)
     :io_lib.format("~2.2.0w:~2.2.0w:~2.2.0w_~3.3.0w.~3.3.0w", [h, m, s, ms, us])
   end
