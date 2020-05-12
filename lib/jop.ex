@@ -17,7 +17,7 @@ defmodule Jop do
   """
 
   @doc """
-  initialize the in memory log with the handle
+  Initialize the in memory log with the handle
   returns the handle
   """
   @spec init(atom) :: true
@@ -26,8 +26,10 @@ defmodule Jop do
   end
 
   @doc """
-  clear all entries in memory
-  returns the handle
+  Clear all entries in memory then
+  reopens the ets table
+
+  Returns the handle
   """
   @spec clear(atom) :: true
   def clear(table) do
@@ -37,13 +39,22 @@ defmodule Jop do
       _ -> :ok
     end
 
-    table = ETS.new(table, [:bag, :named_table, :public])
+    table = ETS.new(table, [:bag, :named_table, :public, :compressed])
     log(table, @tag_start, "")
   end
 
+  @doc """
+  log in `table` a key with its value
+  returns the table handle
+  """
   @spec log(atom, any, any) :: true
-  def log(table, key, op) do
-    true = ETS.insert(table, {key, op, now_us()})
+  def log(table, key, value) do
+    try do
+      true = ETS.insert(table, {key, value, now_us()})
+    rescue
+      _ -> :ok
+    end
+
     table
   end
 
@@ -53,27 +64,30 @@ defmodule Jop do
   """
   @spec flush(atom) :: iolist
   def flush(table) do
-    date = date_str()
-    fname = fname(table, date)
-    fd = File.open!([fname, "dates"], [:write])
-    fb = File.open!([fname, "keys"], [:write])
-    [{_, _, t0}] = ETS.lookup(table, @tag_start)
+    try do
+     fname = fname(table, date_str())
+      fd = File.open!([fname, "dates"], [:write])
+      fb = File.open!([fname, "keys"], [:write])
+      [{_, _, t0}] = ETS.lookup(table, @tag_start)
 
-    ETS.delete(table, @tag_start)
+      ETS.delete(table, @tag_start)
 
-    # flush log to the 'temporal' log file
-    for {k, op, t} <- :lists.keysort(3, ETS.tab2list(table)) do
-       IO.puts fd, "#{fmt_duration_us(t - t0)} #{inspect(k)}: #{inspect(op)}"
+      # flush log to the 'temporal' log file
+      for {k, op, t} <- List.keysort(ETS.tab2list(table), 2) do
+	IO.puts fd, "#{fmt_duration_us(t - t0)} #{inspect(k)}: #{inspect(op)}"
+      end
+
+      # flush log to 'spatial' log file
+      for {k, op, t} <- List.keysort(ETS.tab2list(table), 0) do
+	IO.puts fb, "#{inspect(k)}: #{inspect(op)} #{fmt_duration_us(t - t0)}"
+      end
+
+      for f <- [fd, fb], do: _ = File.close(f)
+      ETS.delete(table)
+      [dates_file: "#{[fname, "dates"]}", spatial_file: "#{[fname, "keys"]}"]
+    rescue
+      _ -> IO.puts "Error: no log in memory."
     end
-
-    # flush log to 'spatial' log file 
-    for {k, op, t} <- :lists.keysort(1, ETS.tab2list(table)) do
-      IO.puts fb, "#{inspect(k)}: #{inspect(op)} #{fmt_duration_us(t - t0)}"
-    end
-
-    for f <- [fd, fb], do: _ = File.close(f)
-    ETS.delete(table)
-    [dates_file: "#{[fname, "dates"]}", spatial_file: "#{[fname, "keys"]}"]
   end
 
   defp fname(table, date), do: ["jop_", Atom.to_string(table), date, "_"]
