@@ -21,9 +21,8 @@ defmodule Jop do
   returns the handle
   """
   @spec init(atom) :: true
-  def init(table) do
-    clear(table)
-  end
+  def init(table),
+    do: clear(table)
 
   @doc """
   Returns the number of elements in log
@@ -40,15 +39,11 @@ defmodule Jop do
   """
   @spec clear(atom) :: true
   def clear(table) do
-    try do
-      ETS.delete(table)
-    rescue
-      _ -> :ok
-    end
-
-    table = ETS.new(table, [:bag, :named_table, :public, :compressed])
+    :undefined != ETS.info(table, :size) &&  ETS.delete(table)
+    table = ETS.new(table, [:bag, :named_table, :public])
     log(table, @tag_start, "")
   end
+
 
   @doc """
   log in `table` a key with its value
@@ -56,12 +51,7 @@ defmodule Jop do
   """
   @spec log(atom, any, any) :: true
   def log(table, key, value) do
-    try do
-      true = ETS.insert(table, {key, value, now_us()})
-    rescue
-      _ -> :ok
-    end
-
+    :undefined != ETS.info(table, :size) && ETS.insert(table, {key, value, now_us()})
     table
   end
 
@@ -72,32 +62,36 @@ defmodule Jop do
   @spec flush(atom) :: iolist
   def flush(table) do
     try do
-     fname = fname(table, date_str())
-      fd = File.open!([fname, "dates"], [:write])
-      fb = File.open!([fname, "keys"], [:write])
       [{_, _, t0}] = ETS.lookup(table, @tag_start)
-
       ETS.delete(table, @tag_start)
-
-      # flush log to the 'temporal' log file
-      for {k, op, t} <- List.keysort(ETS.tab2list(table), 2) do
-	IO.puts fd, "#{fmt_duration_us(t - t0)} #{inspect(k)}: #{inspect(op)}"
-      end
-
-      # flush log to 'spatial' log file
-      for {k, op, t} <- List.keysort(ETS.tab2list(table), 0) do
-	IO.puts fb, "#{inspect(k)}: #{inspect(op)} #{fmt_duration_us(t - t0)}"
-      end
-
-      for f <- [fd, fb], do: _ = File.close(f)
+      logs = ETS.tab2list(table)
       ETS.delete(table)
-      [dates_file: "#{[fname, "dates"]}", spatial_file: "#{[fname, "keys"]}"]
+
+      names = [fname(table, "dates.gz"), fname(table, "keys.gz")]
+      [fa, fb] = for name <- names, do: File.open!(name, [:write, :compressed])
+
+      # TODO factorize
+      awaits =
+	[{Task.async(fn -> # flush log to the 'temporal' log file
+	     for {k, op, t} <- List.keysort(logs, 2) do
+	       IO.puts fa, "#{fmt_duration_us(t - t0)} #{inspect(k)}: #{inspect(op)}"
+	     end
+	   end), fa},
+
+	 {Task.async(fn -> # flush log to 'spatial' log file
+	     for {k, op, t} <- List.keysort(logs, 0) do
+	       IO.puts fb, "#{inspect(k)}: #{inspect(op)} #{fmt_duration_us(t - t0)}"
+	     end
+	   end), fb}]
+
+      for {task, fd} <- awaits, do: (Task.await(task); _ = File.close(fd))
+      for name <- names, do: IO.puts "log stored in #{name}"
     rescue
-      _ -> IO.puts "Error: no log in memory."
+      _ -> IO.puts "Error: no log available."
     end
   end
 
-  defp fname(table, date), do: ["jop_", Atom.to_string(table), date, "_"]
+  defp fname(table, ext), do: ["jop_", Atom.to_string(table), date_str(), "_", ext]
 
   defp now_us(), do: System.monotonic_time(:microsecond)
 

@@ -17,38 +17,41 @@ end
 
 ## Usage
 ```
-  iex> :mylog
+  iex> :myjop
   ...> |> Jop.init()
   ...> |> Jop.log("device_1", data: 112)
   ...> |> Jop.log("device_2", data: 133)
   ...> |> Jop.flush()
-  [
-    dates_file: "jop_mylog.2020_05_12_13.02.39_dates",
-    spatial_file: "jop_mylog.2020_05_12_13.02.39_keys"
-  ]
+log stored in jop_myjop.2020_05_12_21.42.49_dates.gz
+log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
+[:ok, :ok]
 ```
 ## Example
 ```
 log = :myjop |> Jop.init()
-Jop.log(log, "device_1", data: 112)
+Jop.log log, "device_1", data: 112
 
-:timer.sleep(12)
-Jop.clear(log)
-Jop.log(log, "device_2", data: 113)
+Process.sleep 12
+Jop.clear log
+Jop.log log, "device_2", data: 113
 
-:timer.sleep(12)
+Process.sleep 12
 
-Jop.log(log, "device_1", data: 112)
+Jop.log log, "device_1", data: 112
 
-:timer.sleep(12)
+Process.sleep 12
 
-Jop.log(log, "device_2", data: 113)
-Jop.flush(log)
+Jop.log log, "device_2", data: 113
+Jop.flush log
+
+log stored in jop_myjop.2020_05_12_21.42.49_dates.gz
+log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
+[:ok, :ok]
 ```
-will generate both a temporal and a spatial (by key) log files:
+will generate both a temporal (by date) and a spatial (by key) log files:
 
 ### temporal log file
-list all operations by date in file `jop_myjop.2020_05_12_13.06.38_dates`
+list all operations by date in file `jop_myjop.2020_05_12_13.06.38_dates.gz`
 
 ```
 00:00:00_000.482 "device_2": [data: 113]
@@ -58,7 +61,7 @@ list all operations by date in file `jop_myjop.2020_05_12_13.06.38_dates`
 ```
 
 ### spatial (by key) log file
-list all operations by key in file `jop_myjop.2020_05_12_13.06.38_keys`
+list all operations by key in file `jop_myjop.2020_05_12_13.06.38_keys.gz`
 
 ```
 "device_1": [data: 112] 00:00:00_014.674
