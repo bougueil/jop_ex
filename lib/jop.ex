@@ -49,8 +49,8 @@ defmodule Jop do
   @spec clear(atom) :: true
   def clear(table) do
     If_valid.ets table, do: ETS.delete(table)
-    table = ETS.new(table, [:bag, :named_table, :public])
-    log(table, @tag_start, "")
+    ETS.new(table, [:bag, :named_table, :public])
+    |> log(@tag_start, "")
   end
 
 
@@ -92,7 +92,7 @@ defmodule Jop do
 	     end
 	   end), fb}]
 
-      for {task, fd} <- awaits, do: (Task.await(task); _ = File.close(fd))
+      for {task, fd} <- awaits, do: (Task.await(task, :infinity); _ = File.close(fd))
       for name <- names, do: IO.puts "log stored in #{name}"
       table
     rescue
