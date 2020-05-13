@@ -73,13 +73,14 @@ defmodule Jop do
       [{_, _, t0}] = ETS.lookup(table, @tag_start)
       ETS.delete(table, @tag_start)
       logs = ETS.tab2list(table)
+      IO.puts "flushing #{Jop.size(table)} records on files ..."
       ETS.delete(table)
 
       names = [fname(table, "dates.gz"), fname(table, "keys.gz")]
       [fa, fb] = for name <- names, do: File.open!(name, [:write, :compressed])
 
       # TODO factorize
-      awaits =
+       awaits =
 	[{Task.async(fn -> # flush log to the 'temporal' log file
 	     for {k, op, t} <- List.keysort(logs, 2) do
 	       IO.puts fa, "#{fmt_duration_us(t - t0)} #{inspect(k)}: #{inspect(op)}"
