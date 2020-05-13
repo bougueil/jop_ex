@@ -1,5 +1,14 @@
+defmodule If_valid do
+  defmacro ets(tab, do: expression)  do
+    quote do
+      :undefined != :ets.info(unquote(tab), :size) && unquote(expression)
+    end
+  end
+end
+
 defmodule Jop do
   alias :ets, as: ETS
+  require If_valid
   @tag_start "jop_start"
 
   @moduledoc """
@@ -39,7 +48,7 @@ defmodule Jop do
   """
   @spec clear(atom) :: true
   def clear(table) do
-    :undefined != ETS.info(table, :size) &&  ETS.delete(table)
+    If_valid.ets table, do: ETS.delete(table)
     table = ETS.new(table, [:bag, :named_table, :public])
     log(table, @tag_start, "")
   end
@@ -51,8 +60,7 @@ defmodule Jop do
   """
   @spec log(atom, any, any) :: true
   def log(table, key, value) do
-    :undefined != ETS.info(table, :size) && ETS.insert(table, {key, value, now_us()})
-    table
+    If_valid.ets table, do: ETS.insert(table, {key, value, now_us()})
   end
 
   @doc """

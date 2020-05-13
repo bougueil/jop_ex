@@ -28,7 +28,8 @@ log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
 ```
 ## Example
 ```
-log = :myjop |> Jop.init()
+log = :myjop
+Jop.init(log)
 Jop.log log, "device_1", data: 112
 
 Process.sleep 12
