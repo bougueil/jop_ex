@@ -94,7 +94,7 @@ defmodule Jop do
 
 	 {Task.async(fn -> # flush log to 'spatial' log file
 	     for {k, op, t} <- List.keysort(logs, 0) do
-	       IO.puts fb, "#{inspect(k)}: #{inspect(op)} #{fmt_duration_us(t - t0)}"
+	       IO.puts fb, "#{inspect(k)}: #{fmt_duration_us(t - t0)} #{inspect(op)}"
 	     end
 	   end), fb}]
 
