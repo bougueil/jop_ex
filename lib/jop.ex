@@ -50,7 +50,7 @@ defmodule Jop do
   def clear(table) do
     If_valid.ets table, do: ETS.delete(table)
     ETS.new(table, [:bag, :named_table, :public])
-    |> log(@tag_start, "")
+    |> log(@tag_start, "#{date_str()}")
   end
 
 
@@ -64,23 +64,28 @@ defmodule Jop do
   end
 
   @doc """
-  flush the in memory log in 2 files : ordered timestamps & ordered keys files
-  discards memory log data
+  write the log `table` in 2 files dates.gz and keys.gz
+
+  stop logging after flush unless opt is `:nostop`,
   """
-  @spec flush(atom) :: iolist
-  def flush(table) do
+  @spec flush(table :: atom, opt :: atom) :: iolist
+  def flush(table, opt \\ nil) do
     try do
       [{_, _, t0}] = ETS.lookup(table, @tag_start)
-      ETS.delete(table, @tag_start)
       logs = ETS.tab2list(table)
-      IO.puts "flushing #{Jop.size(table)} records on files ..."
-      ETS.delete(table)
+
+      if opt == :nostop do
+	IO.puts "Jop continue logging.\nflushing #{Jop.size(table)} records on files ..."
+      else
+	IO.puts "Jop logging stopped.\nflushing #{Jop.size(table)} records on files ..."
+	ETS.delete(table)
+     end
 
       names = [fname(table, "dates.gz"), fname(table, "keys.gz")]
       [fa, fb] = for name <- names, do: File.open!(name, [:write, :compressed])
 
       # TODO factorize
-       awaits =
+      awaits =
 	[{Task.async(fn -> # flush log to the 'temporal' log file
 	     for {k, op, t} <- List.keysort(logs, 2) do
 	       IO.puts fa, "#{fmt_duration_us(t - t0)} #{inspect(k)}: #{inspect(op)}"
@@ -94,11 +99,12 @@ defmodule Jop do
 	   end), fb}]
 
       for {task, fd} <- awaits, do: (Task.await(task, :infinity); _ = File.close(fd))
-      for name <- names, do: IO.puts "log stored in #{name}"
-      table
+      IO.puts "log stored in :"
+      for name <- names, do: IO.puts "- #{name}"
     rescue
       _ -> IO.puts "Error: no log available."
     end
+    table
   end
 
   defp fname(table, ext), do: ["jop_", Atom.to_string(table), date_str(), "_", ext]
