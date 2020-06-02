@@ -26,62 +26,65 @@ defmodule Jop do
   """
 
   @doc """
-  Initialize the in memory log with the handle
-  returns the handle
+  Initialize Jop to log on memory bank `bank`
+  returns the bank name
   """
   @spec init(atom) :: true
-  def init(table),
-    do: clear(table)
+  def init(bank) when is_atom(bank) do
+    clear(bank)
+    IO.puts "Jop now logging on memory bank #{bank}."
+    bank
+  end
 
   @doc """
-  Returns the number of elements in log or :undefined
+  Returns the number of elements in the memory bank `bank` or :undefined
   """
   @spec size(atom) :: pos_integer() | :undefined
-  def size(table),
-    do: ETS.info(table, :size)
+  def size(bank) when is_atom(bank),
+    do: ETS.info(bank, :size)
 
   @doc """
-  Clear all entries in log then
-  reopens the ets table
+  Clear all entries in the memory bank `bank`
+  reopens the memory bank
 
   Returns the handle
   """
   @spec clear(atom) :: true
-  def clear(table) do
-    If_valid.ets table, do: ETS.delete(table)
-    ETS.new(table, [:bag, :named_table, :public])
+  def clear(bank) when is_atom(bank) do
+    If_valid.ets bank, do: ETS.delete(bank)
+    ETS.new(bank, [:bag, :named_table, :public])
     |> log(@tag_start, "#{date_str()}")
   end
 
 
   @doc """
-  log in `table` a key with its value
-  returns the table handle
+  log in the memory bank `bank` the key with its value
+  returns the bank name
   """
   @spec log(atom, any, any) :: true
-  def log(table, key, value) do
-    If_valid.ets table, do: ETS.insert(table, {key, value, now_us()})
+  def log(bank, key, value) when is_atom(bank) do
+    If_valid.ets bank, do: ETS.insert(bank, {key, value, now_us()})
   end
 
   @doc """
-  write the log `table` in 2 files dates.gz and keys.gz
+  write the memory bank `bank` in 2 files dates.gz and keys.gz
 
-  stop logging after flush unless opt is `:nostop`,
+  stop logging after flushing the memory bank unless opt is `:nostop`,
   """
-  @spec flush(table :: atom, opt :: atom) :: iolist
-  def flush(table, opt \\ nil) do
+  @spec flush(bank :: atom, opt :: atom) :: iolist
+  def flush(bank, opt \\ nil) when is_atom(bank) do
     try do
-      [{_, _, t0}] = ETS.lookup(table, @tag_start)
-      logs = ETS.tab2list(table)
+      [{_, _, t0}] = ETS.lookup(bank, @tag_start)
+      logs = ETS.tab2list(bank)
 
       if opt == :nostop do
-	IO.puts "Jop continue logging.\nflushing #{Jop.size(table)} records on files ..."
+	IO.puts "Jop continue logging.\nflushing memory bank #{bank} (#{Jop.size(bank)} records) on files ..."
       else
-	IO.puts "Jop logging stopped.\nflushing #{Jop.size(table)} records on files ..."
-	ETS.delete(table)
+	IO.puts "Jop logging stopped.\nflushing memory bank #{bank} (#{Jop.size(bank)} records) on files ..."
+	ETS.delete(bank)
      end
 
-      names = [fname(table, "dates.gz"), fname(table, "keys.gz")]
+      names = [fname(bank, "dates.gz"), fname(bank, "keys.gz")]
       [fa, fb] = for name <- names, do: File.open!(name, [:write, :compressed, encoding: :unicode])
 
       # TODO factorize
@@ -104,10 +107,10 @@ defmodule Jop do
     rescue
       _ -> IO.puts "Error: no log available."
     end
-    table
+    bank
   end
 
-  defp fname(table, ext), do: ["jop_", Atom.to_string(table), date_str(), "_", ext]
+  defp fname(bank, ext), do: ["jop_", Atom.to_string(bank), date_str(), "_", ext]
 
   defp now_us(), do: System.monotonic_time(:microsecond)
 
