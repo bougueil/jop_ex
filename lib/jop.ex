@@ -33,6 +33,7 @@ defmodule Jop do
   def init(bank) when is_atom(bank) do
     clear(bank)
     IO.puts "Jop now logging on memory bank #{bank}."
+    IO.puts "BEWARE there is NO WAY to stop logging and filling the memory except by calling Jop:flush #{bank}."
     bank
   end
 
