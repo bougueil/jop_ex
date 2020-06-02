@@ -82,7 +82,7 @@ defmodule Jop do
      end
 
       names = [fname(table, "dates.gz"), fname(table, "keys.gz")]
-      [fa, fb] = for name <- names, do: File.open!(name, [:write, :compressed])
+      [fa, fb] = for name <- names, do: File.open!(name, [:write, :compressed, encoding: :unicode])
 
       # TODO factorize
       awaits =
