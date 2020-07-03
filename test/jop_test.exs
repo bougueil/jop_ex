@@ -4,24 +4,22 @@ defmodule JopTest do
 
   test "log_and_dump" do
     log = :myjop
-    assert Jop.init(log)
+    assert log == Jop.init(log)
 
     Jop.log(log, "mykey1", {:vv, 112})
     :timer.sleep(12)
-    assert log == Jop.clear(log)
+    assert true == Jop.clear(log)
 
-    assert log == Jop.log(log, "mykey2", {:vv, 113})
-
-    :timer.sleep(12)
-    assert log == Jop.log(log, "mykey1", {:vv, 112})
+    assert true == Jop.log(log, "mykey2", {:vv, 113})
 
     :timer.sleep(12)
-    assert log == Jop.log(log, "mykey2", {:vv, 113})
+    assert true == Jop.log(log, "mykey1", {:vv, 112})
+
+    :timer.sleep(12)
+    assert true == Jop.log(log, "mykey2", {:vv, 113})
 
     prefix = Jop.flush(log)
+    assert [] != Path.wildcard "jop_#{prefix}*.gz"
 
-    for fname <- [[prefix, "dates"], [prefix, "keys"]] do
-      IO.puts("\n#{List.to_string(fname)} :\n#{File.read!(fname)}")
-    end
   end
 end
