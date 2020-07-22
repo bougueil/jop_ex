@@ -8,15 +8,15 @@ defmodule JopTest do
 
     Jop.log(log, "mykey1", {:vv, 112})
     :timer.sleep(12)
-    assert true == Jop.clear(log)
+    assert Jop.clear(log)
 
-    assert true == Jop.log(log, "mykey2", {:vv, 113})
-
-    :timer.sleep(12)
-    assert true == Jop.log(log, "mykey1", {:vv, 112})
+    assert Jop.log(log, "mykey2", {:vv, 113})
 
     :timer.sleep(12)
-    assert true == Jop.log(log, "mykey2", {:vv, 113})
+    assert Jop.log(log, "mykey1", {:vv, 112})
+
+    :timer.sleep(12)
+    assert Jop.log(log, "mykey2", {:vv, 113})
 
     prefix = Jop.flush(log)
     assert [] != Path.wildcard "jop_#{prefix}*.gz"
