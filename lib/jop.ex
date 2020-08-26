@@ -1,8 +1,19 @@
 defmodule If_valid do
-  defmacro ets(tab, do: expression)  do
-    quote do
-      :undefined != :ets.info(unquote(tab), :size) && unquote(expression)
-    end
+  defmacro ets(tab, clauses)  do
+    build_if(tab, clauses)
+  end
+
+  defp build_if(tab, do: do_clause) do
+    build_if(tab, do: do_clause, else: nil)
+  end
+
+  defp build_if(tab, do: do_clause, else: else_clause) do
+       quote do
+	case :undefined != :ets.info(unquote(tab), :size) do
+          x when :"Elixir.Kernel".in(x, [false, nil]) -> unquote(else_clause)
+          _ -> unquote(do_clause)
+	end
+      end
   end
 end
 
@@ -74,7 +85,9 @@ defmodule Jop do
   """
   @spec flush(bank :: atom, opt :: atom) :: iolist
   def flush(bank, opt \\ nil) when is_atom(bank) do
-    try do
+
+    If_valid.ets bank do
+
       [{_, _, t0}] = ETS.lookup(bank, @tag_start)
       logs = ETS.tab2list(bank)
 
@@ -83,7 +96,7 @@ defmodule Jop do
       else
 	IO.puts "Jop logging stopped.\nflushing memory bank #{bank} (#{Jop.size(bank)} records) on files ..."
 	ETS.delete(bank)
-     end
+      end
 
       names = [fname(bank, "dates.gz"), fname(bank, "keys.gz")]
       [fa, fb] = for name <- names, do: File.open!(name, [:write, :compressed, encoding: :unicode])
@@ -105,8 +118,7 @@ defmodule Jop do
       for {task, fd} <- awaits, do: (Task.await(task, :infinity); _ = File.close(fd))
       IO.puts "log stored in :"
       for name <- names, do: IO.puts "- #{name}"
-    rescue
-      _ -> IO.puts "Error: no log available."
+
     end
     bank
   end
