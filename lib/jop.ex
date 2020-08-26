@@ -27,7 +27,7 @@ defmodule Jop do
 
   ## Example
 
-  iex> :mylog
+  iex> :myjop
   ...> |> Jop.init()
   ...> |> Jop.log("device_1", data: 112)
   ...> |> Jop.log("device_2", data: 113)
@@ -43,8 +43,7 @@ defmodule Jop do
   @spec init(atom) :: true
   def init(bank) when is_atom(bank) do
     clear(bank)
-    IO.puts "BEWARE There is NO WAY to stop logging and filling the memory except by calling Jop.flush #{inspect(bank)}"
-    IO.puts "Jop now logging on memory bank #{bank}."
+    IO.puts "Jop now logging on memory bank #{bank}, mind the memory."
     bank
   end
 
@@ -75,7 +74,10 @@ defmodule Jop do
   """
   @spec log(atom, any, any) :: true
   def log(bank, key, value) when is_atom(bank) do
-    If_valid.ets bank, do: ETS.insert(bank, {key, value, now_us()})
+    If_valid.ets bank do
+      ETS.insert(bank, {key, value, now_us()})
+      bank
+    end
   end
 
   @doc """
@@ -92,9 +94,9 @@ defmodule Jop do
       logs = ETS.tab2list(bank)
 
       if opt == :nostop do
-	IO.puts "Jop continue logging.\nflushing memory bank #{bank} (#{Jop.size(bank)} records) on files ..."
+	IO.puts "Jop #{bank} continue logging, #{Jop.size(bank)} records flushed on files ..."
       else
-	IO.puts "Jop logging stopped.\nflushing memory bank #{bank} (#{Jop.size(bank)} records) on files ..."
+	IO.puts "Jop #{bank} stopped, #{Jop.size(bank)} records flushed on files ..."
 	ETS.delete(bank)
       end
 
@@ -118,9 +120,8 @@ defmodule Jop do
       for {task, fd} <- awaits, do: (Task.await(task, :infinity); _ = File.close(fd))
       IO.puts "log stored in :"
       for name <- names, do: IO.puts "- #{name}"
-
+      bank
     end
-    bank
   end
 
   defp fname(bank, ext), do: ["jop_", Atom.to_string(bank), date_str(), "_", ext]
@@ -146,4 +147,5 @@ defmodule Jop do
     {_, {h, m, s}} = :calendar.gregorian_seconds_to_datetime(sec)
     :io_lib.format("~2.2.0w:~2.2.0w:~2.2.0w_~3.3.0w.~3.3.0w", [h, m, s, ms, us])
   end
+
 end
