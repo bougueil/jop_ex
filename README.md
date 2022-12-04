@@ -10,7 +10,7 @@ These events are then flushed to files for analysis.
 ```elixir
 def deps do
   [
-    {:jop, git: "git://github.com/bougueil/jop_ex"}
+    {:jop_ex, git: "git://github.com/bougueil/jop_ex"}
   ]
 end
 ```
@@ -19,8 +19,8 @@ end
 ```
   iex> :myjop
   ...> |> Jop.init()
-  ...> |> Jop.log("device_1", data: 112)
-  ...> |> Jop.log("device_2", data: 133)
+  ...> |> Jop.log("key_1", :any_term_112)
+  ...> |> Jop.log("key_2", :any_term_133)
   ...> |> Jop.flush()
 log stored in jop_myjop.2020_05_12_21.42.49_dates.gz
 log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
@@ -30,19 +30,21 @@ log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
 ```
 log = :myjop
 Jop.init(log)
-Jop.log log, "device_1", data: 112
+Jop.log log, "key_1", :any_term_112
 
 Process.sleep 12
+
+# clear log
 Jop.clear log
-Jop.log log, "device_2", data: 113
+Jop.log log, "key_2", :any_term_113
 
 Process.sleep 12
 
-Jop.log log, "device_1", data: 112
+Jop.log log, "key_1", :any_term_112
 
 Process.sleep 12
 
-Jop.log log, "device_2", data: 113
+Jop.log log, "key_2", :any_term_113
 Jop.flush log
 
 log stored in jop_myjop.2020_05_12_21.42.49_dates.gz
@@ -51,21 +53,23 @@ log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
 ```
 will generate both a temporal (by date) and a spatial (by key) log files:
 
-### temporal log file
-list all operations by date in file `jop_myjop.2020_05_12_13.06.38_dates.gz`
+### examining the temporal log file
+list all operations by date :
 
 ```
-00:00:00_000.482 "device_2": [data: 113]
-00:00:00_014.674 "device_1": [data: 112]
-00:00:00_028.568 "device_2": [data: 113]
+zcat jop_myjop.2020_05_12_13.06.38_dates.gz
+00:00:00_000.482 "key_2": :any_term_113
+00:00:00_014.674 "key_1": :any_term_112
+00:00:00_028.568 "key_2": :any_term_113
 
 ```
 
-### spatial (by key) log file
-list all operations by key in file `jop_myjop.2020_05_12_13.06.38_keys.gz`
+### examining the spatial (by key) log file
+list all operations by key :
 
 ```
-"device_1": [data: 112] 00:00:00_014.674
-"device_2": [data: 113] 00:00:00_000.482
-"device_2": [data: 113] 00:00:00_028.568
+zcat jop_myjop.2020_05_12_13.06.38_keys.gz
+"key_1": 00:00:00_014.674 :any_term_112
+"key_2": 00:00:00_000.482 :any_term_113
+"key_2": 00:00:00_028.568 :any_term_113
 ```
