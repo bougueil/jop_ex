@@ -12,7 +12,7 @@ defmodule JopTest do
     joplog = JopLog.init(@jop_log)
     JopLog.log(joplog, "key_1", :any_term_112)
     JopLog.clear(joplog)
-    assert Enum.count(joplog) == 0
+    assert Enum.empty?(joplog)
     assert joplog == JopLog.flush(joplog)
     assert all_logs_are_present?(@jop_log)
   end
