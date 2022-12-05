@@ -1,4 +1,5 @@
 # Elixir JOP: an in-memory key value logger.  
+[![Test](https://github.com/bougueil/jop_ex/actions/workflows/ci.yml/badge.svg)](https://github.com/bougueil/jop_ex/actions/workflows/ci.yml)
 
 Logs in memory spatially and temporarily, key value events.
 These events are then flushed to files for analysis.
