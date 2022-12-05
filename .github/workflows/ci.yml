@@ -70,8 +70,8 @@ jobs:
       - name: Run check-unused
         run: mix deps.unlock --check-unused
 
-      - name: Run no warnings-as-errors
-        run: mix compile --warnings-as-errors
+      - name: Run credo
+        run: mix credo
 
       - name: Run tests
         run: mix test
