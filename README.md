@@ -18,34 +18,31 @@ end
 ## Usage
 ```
   iex> :myjop
-  ...> |> Jop.init()
-  ...> |> Jop.log("key_1", :any_term_112)
-  ...> |> Jop.log("key_2", :any_term_133)
-  ...> |> Jop.flush()
+  ...> |> JopLog.init()
+  ...> |> JopLog.log("key_1", :any_term_112)
+  ...> |> JopLog.log("key_2", :any_term_133)
+  ...> |> JopLog.flush()
 log stored in jop_myjop.2020_05_12_21.42.49_dates.gz
 log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
 :myjop
 ```
 ## Example
 ```
-log = :myjop
-Jop.init(log)
-Jop.log log, "key_1", :any_term_112
-
+joplog = JopLog.init(:myjop)
+JopLog.log joplog, "key_1", :any_term_112
 Process.sleep 12
 
 # clear log
-Jop.clear log
-Jop.log log, "key_2", :any_term_113
+JopLog.clear joplog
 
+JopLog.log joplog, "key_2", :any_term_113
 Process.sleep 12
 
-Jop.log log, "key_1", :any_term_112
-
+JopLog.log joplog, "key_1", :any_term_112
 Process.sleep 12
 
-Jop.log log, "key_2", :any_term_113
-Jop.flush log
+JopLog.log joplog, "key_2", :any_term_113
+JopLog.flush joplog
 
 log stored in jop_myjop.2020_05_12_21.42.49_dates.gz
 log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
