@@ -1,7 +1,7 @@
 # Elixir JOP: an in-memory key value logger
 [![Test](https://github.com/bougueil/jop_ex/actions/workflows/ci.yml/badge.svg)](https://github.com/bougueil/jop_ex/actions/workflows/ci.yml)
 
-Logs in memory, spatially and temporarily, key value events.
+Logs in memory, spatially and temporarily, key value events.<br>
 These events are then flushed to disk for analysis.
 
 
@@ -30,6 +30,7 @@ log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
 ## Example
 ```
 joplog = JopLog.init(:myjop)
+
 JopLog.log joplog, "key_1", :any_term_112
 Process.sleep 12
 
@@ -51,7 +52,7 @@ log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
 ```
 will generate both a temporal (by date) and a spatial (by key) log files:
 
-### examining the temporal log file
+### inspect the temporal log file
 list all operations by date :
 
 ```
@@ -63,7 +64,7 @@ zcat jop_myjop.2020_05_12_13.06.38_dates.gz
 
 ```
 
-### examining the spatial (by key) log file
+### inspect the spatial (by key) log file
 list all operations by key :
 
 ```
