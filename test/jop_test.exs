@@ -72,7 +72,7 @@ defmodule JopTest do
     assert joplog == JopLog.log(joplog, "mykey", "myvalue")
     assert joplog == JopLog.log(joplog, "mykey", "myvalue777")
     refute JopLog.is_initialized(joplog)
-    joplog = JopLog.init(@jop_log)
+    ^joplog = JopLog.init(@jop_log)
     assert match?(joplog, JopLog.init(@jop_log))
     assert joplog == JopLog.log(joplog, "mykey", "myvalue")
     assert joplog == JopLog.log(joplog, "mykey", "myvalue777")
