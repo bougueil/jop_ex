@@ -1,3 +1,5 @@
+# See LICENSE for licensing information.
+
 defmodule If_valid do
   defmacro ets(tab, clauses) do
     build_if(tab, clauses)
