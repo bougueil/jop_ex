@@ -1,8 +1,8 @@
-# Elixir JOP: an in-memory key value logger.  
+# Elixir JOP: an in-memory key value logger
 [![Test](https://github.com/bougueil/jop_ex/actions/workflows/ci.yml/badge.svg)](https://github.com/bougueil/jop_ex/actions/workflows/ci.yml)
 
-Logs in memory spatially and temporarily, key value events.
-These events are then flushed to files for analysis.
+Logs in memory, spatially and temporarily, key value events.
+These events are then flushed to disk for analysis.
 
 
 ## Installation
@@ -56,6 +56,7 @@ list all operations by date :
 
 ```
 zcat jop_myjop.2020_05_12_13.06.38_dates.gz
+
 00:00:00_000.482 "key_2": :any_term_113
 00:00:00_014.674 "key_1": :any_term_112
 00:00:00_028.568 "key_2": :any_term_113
@@ -67,6 +68,7 @@ list all operations by key :
 
 ```
 zcat jop_myjop.2020_05_12_13.06.38_keys.gz
+
 "key_1": 00:00:00_014.674 :any_term_112
 "key_2": 00:00:00_000.482 :any_term_113
 "key_2": 00:00:00_028.568 :any_term_113
