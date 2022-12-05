@@ -147,6 +147,7 @@ defmodule JopLog do
     case ETS.lookup(tab, @tag_start) do
       [{_, _, t0}] ->
         t0
+
       [] ->
         nil
     end

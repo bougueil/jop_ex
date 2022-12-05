@@ -17,13 +17,12 @@ defmodule Jop.Mixfile do
     ]
   end
 
-    # Run "mix help deps" to learn about dependencies.
-    defp deps do
-      [
-        {:ex_doc, "~> 0.29.1", only: [:docs, :test], runtime: false},
-        {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
-        {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
-      ]
-    end
-
+  # Run "mix help deps" to learn about dependencies.
+  defp deps do
+    [
+      {:ex_doc, "~> 0.29.1", only: [:docs, :test], runtime: false},
+      {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
+    ]
+  end
 end
