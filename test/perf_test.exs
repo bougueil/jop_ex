@@ -5,7 +5,7 @@ defmodule PerfTest do
   test "measure logging" do
     joplog = JopLog.init(@jop_log)
 
-    n = 1000_000
+    n = 1_000_000
 
     {tlog, _} =
       fn ->
