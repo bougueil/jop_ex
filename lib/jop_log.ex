@@ -4,14 +4,14 @@ defmodule IfValidEts do
   @moduledoc false
 
   defmacro ets(tab, clauses) do
-    build_if(tab, clauses)
+    valid_if(tab, clauses)
   end
 
-  defp build_if(tab, do: do_clause) do
-    build_if(tab, do: do_clause, else: nil)
+  defp valid_if(tab, do: do_clause) do
+    valid_if(tab, do: do_clause, else: nil)
   end
 
-  defp build_if(tab, do: do_clause, else: else_clause) do
+  defp valid_if(tab, do: do_clause, else: else_clause) do
     quote do
       case :undefined != :ets.info(unquote(tab), :size) do
         x when :"Elixir.Kernel".in(x, [false, nil]) -> unquote(else_clause)
@@ -39,23 +39,27 @@ defmodule JopLog do
 
   """
 
-  defstruct [:id, :ets]
-  @type t :: %__MODULE__{id: atom(), ets: ETS.t()}
+  defstruct [:ets]
+  @type t :: %__MODULE__{ets: ETS.t()}
 
   @doc """
-  Initialize JopLog to log on memory with joplog id `id`
-  returns the joplog id
-
-  - JopLog.init(id) returns an initialized Struct for use with log/1;
-  - id is an atom, the name of the underlying ets table;
-  - JopLog.ref(id) a reference to a JopLog Struct.
+  Initialize JopLog with an ets table.
+  returns a %Joplog{}
   """
-  @spec init(id: atom()) :: JopLog.t()
-  def init(id) when is_atom(id) do
-    joplog = ref(id)
-    reset(joplog)
-    ETS.new(joplog.ets, [:bag, :named_table, :public])
-    IO.puts("JopLog now logging on memory id #{id}.")
+  @spec init(joplog_name: String.t()) :: JopLog.t()
+  def init(joplog_name) when is_binary(joplog_name) do
+    tab = String.to_atom(joplog_name)
+
+    IfValidEts.ets tab do
+      JopLog.ref(joplog_name)
+      |> reset()
+    end
+
+    ETS.new(tab, [:bag, :named_table, :public])
+
+    joplog = JopLog.ref(joplog_name)
+
+    IO.puts("JopLog now logging on memory joplog #{joplog.ets}.")
     log(joplog, @tag_start, "#{date_str()}")
   end
 
@@ -63,13 +67,20 @@ defmodule JopLog do
   returns a reference, in case the JopLog Struct
   returned by init/1 is used by different processes
   """
-  @spec ref(id :: atom()) :: JopLog.t()
-  def ref(id) when is_atom(id),
-    do: %JopLog{id: id, ets: String.to_atom("jop_#{id}")}
+  @spec ref(joplog_name :: String.t()) :: JopLog.t()
+  def ref(joplog_name) when is_binary(joplog_name) do
+    tab = String.to_atom(joplog_name)
+
+    IfValidEts.ets tab do
+      %JopLog{ets: tab}
+    else
+      throw(:uninitialized)
+    end
+  end
 
   @doc """
-  log in the memory id `id` the key with its value
-  returns the id name
+  log in `%JopLog{}` key and value
+  returns the updated `%JopLog{}`.
   """
   @spec log(JopLog.t(), any, any) :: JopLog.t()
   def log(%JopLog{ets: tab} = jop, key, value) do
@@ -83,7 +94,7 @@ defmodule JopLog do
   unless option :notstop is used, logging is stopped.
   """
   @spec flush(JopLog.t(), opt :: atom) :: JopLog.t()
-  def flush(%JopLog{id: id, ets: tab} = joplog, opt \\ nil) do
+  def flush(%JopLog{ets: tab} = joplog, opt \\ nil) do
     IfValidEts.ets tab do
       {logs, t0} =
         case lookup_tag_start(tab) do
@@ -96,19 +107,19 @@ defmodule JopLog do
 
       if opt == :nostop do
         IO.puts(
-          "JopLog continue logging.\nflushing memory id #{id} (#{Enum.count(joplog)} records) on files ..."
+          "JopLog continue logging.\nflushing memory joplog #{tab} (#{Enum.count(joplog)} records) on files ..."
         )
 
         clear(joplog)
       else
         IO.puts(
-          "JopLog logging stopped.\nflushing memory id #{id} (#{Enum.count(joplog)} records) on files ..."
+          "JopLog logging stopped.\nflushing memory joplog #{tab} (#{Enum.count(joplog)} records) on files ..."
         )
 
         reset(joplog)
       end
 
-      names = [fname(id, "dates.gz"), fname(id, "keys.gz")]
+      names = [fname(tab, "dates.gz"), fname(tab, "keys.gz")]
 
       [fa, fb] =
         for name <- names, do: File.open!(name, [:write, :compressed, encoding: :unicode])
@@ -176,7 +187,7 @@ defmodule JopLog do
     joplog
   end
 
-  defp fname(id, ext), do: ["jop_", Atom.to_string(id), date_str(), "_", ext]
+  defp fname(tab, ext), do: ["jop_#{tab}", date_str(), "_", ext]
 
   defp now_μs(), do: System.monotonic_time(:microsecond)
 
@@ -203,16 +214,26 @@ defmodule JopLog do
     :io_lib.format(@usecond_format, [h, m, s, ms, us])
   end
 
+  @doc """
+  returns if the %JopLog{} is initialized with an ets table
+  """
   def is_initialized(%JopLog{ets: ets}),
     do: IfValidEts.ets(ets, do: true, else: false)
 
   defimpl Enumerable do
+    @doc """
+    returns the size of the ets table
+    """
     def count(%JopLog{ets: ets}) do
       {:ok, max(0, ETS.info(ets, :size) - 1)}
     end
 
-    def member?(%JopLog{ets: ets}, element) do
-      {:ok, ETS.member(ets, element)}
+    @doc """
+    returns if `key`is member of the %JopLog{}
+    """
+    @spec member?(JopLog.t(), any) :: {:ok, boolean}
+    def member?(%JopLog{ets: ets}, key) do
+      {:ok, ETS.member(ets, key)}
     end
 
     def reduce(%JopLog{ets: ets}, acc, fun) do
@@ -231,11 +252,11 @@ defmodule JopLog do
   defimpl Inspect do
     import Inspect.Algebra
 
-    def inspect(%JopLog{id: id, ets: ets} = jop, opts) do
-      IfValidEts.ets ets do
-        concat(["#JopLog<#{id}:size(", to_doc(Enum.count(jop), opts), ")>"])
+    def inspect(%JopLog{ets: tab} = jop, opts) do
+      IfValidEts.ets tab do
+        concat(["#JopLog<#{tab}:size(", to_doc(Enum.count(jop), opts), ")>"])
       else
-        concat(["#JopLog<#{id}:uninitialized>"])
+        concat(["#JopLog<#{tab}:uninitialized>"])
       end
     end
   end

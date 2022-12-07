@@ -1,11 +1,30 @@
 defmodule JopTest do
   use ExUnit.Case
-  @jop_log :jop_log
+  @jop_log "test_jop_log"
 
   #  doctest JopLog
 
   setup do
     on_exit(fn -> clean_jop_files(@jop_log) end)
+  end
+
+  test "ref from unitialized" do
+    assert try do: JopLog.ref("bang"), catch: (any -> true), else: (_ -> false)
+  end
+
+  test "ref from initialized" do
+    joplog = JopLog.init(@jop_log)
+    assert try do: JopLog.ref(@jop_log), catch: (any -> false), else: (_ -> true)
+    assert is_struct(joplog, JopLog)
+  end
+
+  test "double init" do
+    joplog = JopLog.init(@jop_log)
+    ^joplog = JopLog.init(@jop_log)
+    assert is_struct(joplog, JopLog)
+    assert Enum.empty?(joplog)
+    assert joplog == JopLog.flush(joplog)
+    assert all_logs_are_present?(@jop_log)
   end
 
   test "clear" do
@@ -56,26 +75,12 @@ defmodule JopTest do
     assert all_logs_are_present?(@jop_log)
   end
 
-  test "unitialized_log" do
-    joplog = JopLog.ref(@jop_log)
-    assert joplog == JopLog.log(joplog, "mykey1", {:vv, 112})
-    assert joplog == JopLog.log(joplog, "mykey2", {:vv, 113})
-    assert joplog == JopLog.log(joplog, "mykey1", {:vv, 112})
-    assert joplog == JopLog.log(joplog, "mykey2", {:vv, 113})
-    refute JopLog.is_initialized(joplog)
-    assert joplog == JopLog.flush(joplog)
-    refute all_logs_are_present?(@jop_log)
-  end
+  test "is_initialized" do
+    job_ref = try do: JopLog.ref(@jop_log), catch: (any -> any)
+    assert job_ref == :uninitialized
+    joplog = JopLog.init(@jop_log)
+    assert JopLog.is_initialized(joplog)
 
-  test "out_of_order" do
-    joplog = JopLog.ref(@jop_log)
-    assert joplog == JopLog.log(joplog, "mykey", "myvalue")
-    assert joplog == JopLog.log(joplog, "mykey", "myvalue777")
-    refute JopLog.is_initialized(joplog)
-    ^joplog = JopLog.init(@jop_log)
-    assert match?(joplog, JopLog.init(@jop_log))
-    assert joplog == JopLog.log(joplog, "mykey", "myvalue")
-    assert joplog == JopLog.log(joplog, "mykey", "myvalue777")
     assert joplog == JopLog.flush(joplog)
     assert all_logs_are_present?(@jop_log)
   end
