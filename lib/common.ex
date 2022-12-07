@@ -1,3 +1,5 @@
+# See LICENSE for licensing information.
+
 defmodule JL.Valid do
   @moduledoc false
 

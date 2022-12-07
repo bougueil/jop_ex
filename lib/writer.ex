@@ -1,3 +1,5 @@
+# See LICENSE for licensing information.
+
 defmodule JL.Writer do
   @moduledoc false
 
