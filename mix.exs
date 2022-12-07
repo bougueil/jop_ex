@@ -1,4 +1,4 @@
-defmodule Jop.Mixfile do
+defmodule JopLog.Mixfile do
   use Mix.Project
 
   def project do
@@ -13,7 +13,7 @@ defmodule Jop.Mixfile do
 
   def application do
     [
-      extra_applications: []
+      extra_applications: [:logger]
     ]
   end
 
