@@ -1,29 +1,8 @@
 # See LICENSE for licensing information.
 
-defmodule IfValidEts do
-  @moduledoc false
-
-  defmacro ets(tab, clauses) do
-    valid_if(tab, clauses)
-  end
-
-  defp valid_if(tab, do: do_clause) do
-    valid_if(tab, do: do_clause, else: nil)
-  end
-
-  defp valid_if(tab, do: do_clause, else: else_clause) do
-    quote do
-      case :undefined != :ets.info(unquote(tab), :size) do
-        x when :"Elixir.Kernel".in(x, [false, nil]) -> unquote(else_clause)
-        _ -> unquote(do_clause)
-      end
-    end
-  end
-end
-
 defmodule JopLog do
   alias :ets, as: ETS
-  require IfValidEts
+  require JL.Valid
   @tag_start "joplog_start"
 
   @moduledoc """
@@ -50,7 +29,7 @@ defmodule JopLog do
   def init(joplog_name) when is_binary(joplog_name) do
     tab = String.to_atom(joplog_name)
 
-    IfValidEts.ets tab do
+    JL.Valid.ets? tab do
       JopLog.ref(joplog_name)
       |> reset()
     end
@@ -60,7 +39,7 @@ defmodule JopLog do
     joplog = JopLog.ref(joplog_name)
 
     IO.puts("JopLog now logging on memory joplog #{joplog.ets}.")
-    log(joplog, @tag_start, "#{date_str()}")
+    log(joplog, @tag_start, "#{JL.Common.date_str()}")
   end
 
   @doc """
@@ -71,11 +50,7 @@ defmodule JopLog do
   def ref(joplog_name) when is_binary(joplog_name) do
     tab = String.to_atom(joplog_name)
 
-    IfValidEts.ets tab do
-      %JopLog{ets: tab}
-    else
-      throw(:uninitialized)
-    end
+    JL.Valid.ets?(tab, do: %JopLog{ets: tab}, else: throw(:uninitialized))
   end
 
   @doc """
@@ -84,7 +59,7 @@ defmodule JopLog do
   """
   @spec log(JopLog.t(), any, any) :: JopLog.t()
   def log(%JopLog{ets: tab} = jop, key, value) do
-    IfValidEts.ets(tab, do: ETS.insert(tab, {key, value, now_μs()}))
+    JL.Valid.ets?(tab, do: ETS.insert(tab, {key, value, now_μs()}))
     jop
   end
 
@@ -95,7 +70,7 @@ defmodule JopLog do
   """
   @spec flush(JopLog.t(), opt :: atom) :: JopLog.t()
   def flush(%JopLog{ets: tab} = joplog, opt \\ nil) do
-    IfValidEts.ets tab do
+    JL.Valid.ets? tab do
       {logs, t0} =
         case lookup_tag_start(tab) do
           nil ->
@@ -119,46 +94,14 @@ defmodule JopLog do
         reset(joplog)
       end
 
-      names = [fname(tab, "dates.gz"), fname(tab, "keys.gz")]
-
-      [fa, fb] =
-        for name <- names, do: File.open!(name, [:write, :compressed, encoding: :unicode])
-
-      # factorize
-      # flush log to the 'temporal' log file
-      awaits = [
-        {Task.async(fn ->
-           for {k, op, t} <- List.keysort(logs, 2) do
-             IO.puts(fa, "#{fmt_duration_us(t - t0)} #{inspect(k)}: #{inspect(op)}")
-           end
-         end), fa},
-        # flush log to 'spatial' log file
-        {Task.async(fn ->
-           for {k, op, t} <- List.keysort(logs, 0) do
-             IO.puts(fb, "#{inspect(k)}: #{fmt_duration_us(t - t0)} #{inspect(op)}")
-           end
-         end), fb}
-      ]
-
-      for {task, fd} <- awaits,
-          do:
-            (
-              Task.await(task, :infinity)
-              _ = File.close(fd)
-            )
-
-      IO.puts("log stored in :")
-      for name <- names, do: IO.puts("- #{name}")
+      JL.Writer.flush(tab, t0, logs)
     end
 
     joplog
   end
 
-  defp reset(%JopLog{ets: tab}) do
-    IfValidEts.ets(tab,
-      do: ETS.delete(tab)
-    )
-  end
+  defp reset(%JopLog{ets: tab}),
+    do: JL.Valid.ets?(tab, do: ETS.delete(tab))
 
   defp lookup_tag_start(tab) do
     case ETS.lookup(tab, @tag_start) do
@@ -175,7 +118,7 @@ defmodule JopLog do
   """
   @spec clear(JopLog.t()) :: JopLog.t()
   def clear(%JopLog{ets: tab} = joplog) do
-    IfValidEts.ets tab do
+    JL.Valid.ets? tab do
       t0 = lookup_tag_start(tab)
       ETS.delete_all_objects(tab)
 
@@ -187,38 +130,13 @@ defmodule JopLog do
     joplog
   end
 
-  defp fname(tab, ext), do: ["jop_#{tab}", date_str(), "_", ext]
-
   defp now_μs(), do: System.monotonic_time(:microsecond)
-
-  @date_format ".~p_~2.2.0w_~2.2.0w_~2.2.0w.~2.2.0w.~2.2.0w"
-  @usecond_format "~2.2.0w:~2.2.0w:~2.2.0w_~3.3.0w.~3.3.0w"
-
-  defp date_str() do
-    hms =
-      List.flatten(
-        for e <- Tuple.to_list(:calendar.universal_time_to_local_time(:calendar.universal_time())) do
-          Tuple.to_list(e)
-        end
-      )
-
-    :io_lib.format(@date_format, hms)
-  end
-
-  defp fmt_duration_us(duration_us) do
-    sec = div(duration_us, 1_000_000)
-    rem_us = rem(duration_us, 1_000_000)
-    ms = div(rem_us, 1000)
-    us = rem(rem_us, 1000)
-    {_, {h, m, s}} = :calendar.gregorian_seconds_to_datetime(sec)
-    :io_lib.format(@usecond_format, [h, m, s, ms, us])
-  end
 
   @doc """
   returns if the %JopLog{} is initialized with an ets table
   """
   def is_initialized(%JopLog{ets: ets}),
-    do: IfValidEts.ets(ets, do: true, else: false)
+    do: JL.Valid.ets?(ets, do: true, else: false)
 
   defimpl Enumerable do
     @doc """
@@ -253,7 +171,7 @@ defmodule JopLog do
     import Inspect.Algebra
 
     def inspect(%JopLog{ets: tab} = jop, opts) do
-      IfValidEts.ets tab do
+      JL.Valid.ets? tab do
         concat(["#JopLog<#{tab}:size(", to_doc(Enum.count(jop), opts), ")>"])
       else
         concat(["#JopLog<#{tab}:uninitialized>"])
