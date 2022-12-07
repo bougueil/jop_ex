@@ -27,6 +27,13 @@ log stored in jop_myjop.2020_05_12_21.42.49_dates.gz
 log stored in jop_myjop.2020_05_12_21.42.49_keys.gz
 :myjop
 ```
+
+## Performance
+Excerpt from a run of the unit test :
+```
+througput 1267456 logs/s.
+```
+
 ## Example
 ```
 joplog = JopLog.init(:myjop)
